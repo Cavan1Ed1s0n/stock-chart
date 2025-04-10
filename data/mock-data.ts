@@ -85,6 +85,22 @@ export const stockEvents: Record<string, StockEvent[]> = {
   ],
   nvda: [
     {
+      id: "nvda-00",
+      timestamp: "2025-01-15",
+      title: "Deepseek",
+      description: "Deepseek releases Chatbot",
+      icon: "/placeholder.svg?height=40&width=40",
+      impact: "negative",
+    },
+    {
+      id: "nvda-11",
+      timestamp: "2025-01-20",
+      title: "Trump",
+      description: "Trump releases Trump coin",
+      icon: "/placeholder.svg?height=40&width=40",
+      impact: "positive",
+    },
+    {
       id: "nvda-1",
       timestamp: "2023-08-23",
       title: "Q2 Earnings Surge",
