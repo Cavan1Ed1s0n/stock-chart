@@ -1,298 +1,187 @@
 "use client"
 
-import { useRef, useState, useEffect } from "react"
-import {
-  Line,
-  LineChart,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceLine,
-  Label,
-} from "recharts"
+import { useEffect, useState } from "react"
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Card, CardContent } from "@/components/ui/card"
-import { ImageWithFallback } from "@/components/ui/image-with-fallback"
+import { Button } from "@/components/ui/button"
+import { useStockData } from "@/hooks/use-stock-data"
+import { EventAnnotation } from "@/components/event-annotation"
 
-export default function StockChart({ data, symbol, events = [] }) {
-  const chartRef = useRef(null)
-  const [processedEvents, setProcessedEvents] = useState([])
-  const [chartDimensions, setChartDimensions] = useState({ width: 0, height: 0 })
-  const [chartArea, setChartArea] = useState({ top: 0, right: 0, bottom: 0, left: 0 })
+export default function StockChart() {
+  const { stockData, events, selectedStock, timeframe, setTimeframe } = useStockData()
+  const [chartWidth, setChartWidth] = useState(0)
+  const [chartHeight, setChartHeight] = useState(0)
+  const [chartRef, setChartRef] = useState<HTMLDivElement | null>(null)
 
-  // Format the data for Recharts
-  const formattedData = data.map((item) => ({
-    date: new Date(item.date).toLocaleDateString(),
-    price: item.close,
-    volume: item.volume,
-    timestamp: new Date(item.date).getTime(),
-    rawDate: item.date,
-  }))
-
-  // Process events when data or events change
   useEffect(() => {
-    if (!data || !events || events.length === 0) {
-      setProcessedEvents([])
-      return
-    }
-
-    try {
-      // Find matching data points for events
-      const processed = events.map((event) => {
-        const eventTimestamp = event.date.getTime()
-
-        // Find closest data point
-        let closestPoint = null
-        let closestDistance = Number.POSITIVE_INFINITY
-        let closestIndex = -1
-
-        formattedData.forEach((point, index) => {
-          const distance = Math.abs(point.timestamp - eventTimestamp)
-          if (distance < closestDistance) {
-            closestDistance = distance
-            closestPoint = point
-            closestIndex = index
-          }
-        })
-
-        return {
-          ...event,
-          date: closestPoint.date,
-          price: closestPoint.price,
-          dataIndex: closestIndex,
-          xPosition: (closestIndex / (formattedData.length - 1)) * 100,
+    if (chartRef) {
+      const resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          setChartWidth(entry.contentRect.width)
+          setChartHeight(entry.contentRect.height)
         }
       })
 
-      setProcessedEvents(processed)
-    } catch (error) {
-      console.error("Error processing events:", error)
-      // If there's an error, just use empty events
-      setProcessedEvents([])
-    }
-  }, [data, events])
-
-  // Update chart dimensions on window resize and initial render
-  useEffect(() => {
-    const updateDimensions = () => {
-      if (chartRef.current?.container) {
-        const { width, height } = chartRef.current.container.getBoundingClientRect()
-        setChartDimensions({ width, height })
-
-        // Get chart area (the actual plotting area excluding axes and margins)
-        if (chartRef.current.state && chartRef.current.state.offset) {
-          setChartArea({
-            top: chartRef.current.state.offset.top,
-            right: chartRef.current.state.offset.right,
-            bottom: chartRef.current.state.offset.bottom,
-            left: chartRef.current.state.offset.left,
-          })
-        }
+      resizeObserver.observe(chartRef)
+      return () => {
+        resizeObserver.disconnect()
       }
     }
+  }, [chartRef])
 
-    // Initial update
-    const timer = setTimeout(updateDimensions, 100)
+  const timeframeOptions = [
+    { label: "1D", value: "1d" },
+    { label: "1W", value: "1w" },
+    { label: "1M", value: "1m" },
+    { label: "3M", value: "3m" },
+    { label: "1Y", value: "1y" },
+    { label: "All", value: "all" },
+  ]
 
-    // Add resize listener
-    window.addEventListener("resize", updateDimensions)
+  // Filter events based on the visible data range
+  const visibleEvents = events.filter((event) => {
+    if (!stockData.length) return false
+    const eventDate = new Date(event.timestamp).getTime()
+    const firstDate = new Date(stockData[0].date).getTime()
+    const lastDate = new Date(stockData[stockData.length - 1].date).getTime()
+    return eventDate >= firstDate && eventDate <= lastDate
+  })
 
-    return () => {
-      clearTimeout(timer)
-      window.removeEventListener("resize", updateDimensions)
+  // Find the corresponding data point for each event
+  const eventDataPoints = visibleEvents.map((event) => {
+    const closestPoint = stockData.reduce((prev, curr) => {
+      const prevDate = new Date(prev.date).getTime()
+      const currDate = new Date(curr.date).getTime()
+      const eventDate = new Date(event.timestamp).getTime()
+      return Math.abs(currDate - eventDate) < Math.abs(prevDate - eventDate) ? curr : prev
+    }, stockData[0])
+
+    return {
+      event,
+      dataPoint: closestPoint,
     }
-  }, [])
-
-  // Calculate the Y position for an event based on its price
-  const calculateYPosition = (price) => {
-    if (!chartRef.current || !chartDimensions.height) return 0
-
-    const { domain } = chartRef.current.state.yAxis[0] || { domain: [0, 0] }
-    if (!domain || domain[0] === domain[1]) return 0
-
-    const [min, max] = domain
-    const availableHeight = chartDimensions.height - chartArea.top - chartArea.bottom
-
-    // Calculate the percentage position within the domain
-    const percentage = (max - price) / (max - min)
-
-    // Convert to pixel position
-    return chartArea.top + percentage * availableHeight
-  }
-
-  // Custom tooltip component
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      // Find if there's an event on this date
-      const eventOnDate = processedEvents.find((e) => e.date === label)
-
-      return (
-        <div className="bg-gray-900 p-3 border border-gray-700 rounded shadow-lg">
-          <p className="text-gray-300 mb-1">{label}</p>
-          <p className="text-white font-bold">${payload[0].value.toFixed(2)}</p>
-
-          {eventOnDate && (
-            <div className="mt-2 pt-2 border-t border-gray-700">
-              <p className="font-medium" style={{ color: eventOnDate.color }}>
-                {eventOnDate.description}
-              </p>
-            </div>
-          )}
-        </div>
-      )
-    }
-    return null
-  }
-
-  // Custom dot component for events
-  const CustomDot = (props) => {
-    const { cx, cy, payload } = props
-    const event = processedEvents.find((e) => e.date === payload.date)
-
-    if (!event) return null
-
-    return <circle cx={cx} cy={cy} r={6} fill={event.color} stroke="#000" strokeWidth={1} />
-  }
+  })
 
   return (
-    <div className="w-full">
-      <div className="h-[600px] relative">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={formattedData}
-            margin={{ top: 40, right: 30, left: 20, bottom: 60 }}
-            ref={chartRef}
-            onMouseUp={() => {
-              // Update chart dimensions after user interaction
-              if (chartRef.current?.container) {
-                const { width, height } = chartRef.current.container.getBoundingClientRect()
-                setChartDimensions({ width, height })
-
-                if (chartRef.current.state && chartRef.current.state.offset) {
-                  setChartArea({
-                    top: chartRef.current.state.offset.top,
-                    right: chartRef.current.state.offset.right,
-                    bottom: chartRef.current.state.offset.bottom,
-                    left: chartRef.current.state.offset.left,
-                  })
-                }
-              }
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.5} />
-            <XAxis dataKey="date" tick={{ fill: "#ccc" }} tickMargin={10} angle={-45} height={60} />
-            <YAxis
-              tick={{ fill: "#ccc" }}
-              domain={["auto", "auto"]}
-              tickFormatter={(value) => `$${value.toFixed(2)}`}
-              width={80}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">
+          {selectedStock.name} ({selectedStock.symbol})
+        </h2>
+        <div className="flex space-x-2">
+          {timeframeOptions.map((option) => (
+            <Button
+              key={option.value}
+              variant={timeframe === option.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTimeframe(option.value)}
+              className="px-3 py-1 h-8"
             >
-              <Label
-                value="Price (USD)"
-                angle={-90}
-                position="insideLeft"
-                style={{ textAnchor: "middle", fill: "#ccc", fontSize: 12 }}
-                offset={-10}
-              />
-            </YAxis>
-            <Tooltip content={<CustomTooltip />} />
-            <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingTop: "10px" }} />
-
-            {/* Event reference lines */}
-            {processedEvents.map((event, index) => (
-              <ReferenceLine key={index} x={event.date} stroke={event.color} strokeDasharray="3 3" />
-            ))}
-
-            <Line
-              type="monotone"
-              dataKey="price"
-              stroke="#2962FF"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 8 }}
-              name={`${symbol} Price`}
-            />
-
-            {/* Add a second line just for event dots */}
-            <Line
-              dataKey="price"
-              stroke="transparent"
-              dot={<CustomDot />}
-              activeDot={false}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-
-        {/* Event annotations positioned on the chart */}
-        {processedEvents.map((event, index) => {
-          // Only render if we have dimensions and the event has a position
-          if (!chartDimensions.width || event.xPosition === undefined) return null
-
-          // Calculate the x position in pixels
-          const xPixel =
-            (chartDimensions.width - chartArea.left - chartArea.right) * (event.xPosition / 100) + chartArea.left
-
-          // Calculate the y position based on the price
-          const yPixel = calculateYPosition(event.price)
-
-          return (
-            <div
-              key={index}
-              className="absolute transform -translate-x-1/2 -translate-y-full"
-              style={{
-                left: `${xPixel}px`,
-                top: `${yPixel - 10}px`, // Position above the point
-                zIndex: 1000,
-              }}
-            >
-              <div
-                className="px-2 py-1 rounded text-xs font-bold whitespace-nowrap shadow-lg mb-1"
-                style={{
-                  backgroundColor: `${event.color}CC`, // More opacity for better visibility
-                  color: "#fff", // White text for better contrast
-                  border: `1px solid ${event.color}`,
-                  maxWidth: "150px",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {event.description}
-              </div>
-              <div
-                className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent mx-auto"
-                style={{ borderTopColor: event.color }}
-              ></div>
-            </div>
-          )
-        })}
+              {option.label}
+            </Button>
+          ))}
+        </div>
       </div>
 
-      {/* Event images */}
-      <div className="flex flex-wrap gap-4 mt-6">
-        {processedEvents
-          .filter((e) => e.imageUrl)
-          .map((event, index) => (
-            <Card key={index} className="w-auto bg-gray-900 border-gray-800">
-              <CardContent className="p-3 flex items-center gap-3">
-                <ImageWithFallback
-                  src={event.imageUrl || "/placeholder.svg"}
-                  alt={event.description}
-                  width={48}
-                  height={48}
-                  className="rounded-md"
-                />
-                <div>
-                  <p className="text-sm font-medium" style={{ color: event.color }}>
-                    {event.description}
-                  </p>
-                  <p className="text-xs text-gray-400">{event.date}</p>
+      <Card>
+        <CardContent className="p-0">
+          <div className="relative h-[500px]" ref={setChartRef}>
+            <ChartContainer
+              config={{
+                price: {
+                  label: "Price",
+                  color: "hsl(var(--chart-1))",
+                },
+                volume: {
+                  label: "Volume",
+                  color: "hsl(var(--chart-2))",
+                },
+              }}
+              className="h-full"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stockData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(value) => {
+                      const date = new Date(value)
+                      return date.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: timeframe === "1y" || timeframe === "all" ? "numeric" : undefined,
+                      })
+                    }}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis
+                    domain={["auto", "auto"]}
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `$${value.toFixed(2)}`}
+                  />
+                  <ChartTooltip
+                    content={<ChartTooltipContent formatter={(value) => `$${Number(value).toFixed(2)}`} />}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="price"
+                    stroke="var(--color-price)"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+
+            {/* Event Annotations */}
+            {eventDataPoints.map(({ event, dataPoint }, index) => (
+              <EventAnnotation
+                key={index}
+                event={event}
+                dataPoint={dataPoint}
+                chartWidth={chartWidth}
+                chartHeight={chartHeight}
+                stockData={stockData}
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold mb-2">Event Timeline</h3>
+        <div className="space-y-2">
+          {visibleEvents.length > 0 ? (
+            visibleEvents.map((event, index) => (
+              <div key={index} className="flex items-start p-3 bg-gray-50 rounded-md">
+                <div className="w-10 h-10 flex-shrink-0 mr-3 bg-gray-200 rounded-md overflow-hidden">
+                  {event.icon && (
+                    <img
+                      src={event.icon || "/placeholder.svg"}
+                      alt={event.title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                <div>
+                  <p className="font-medium">{event.title}</p>
+                  <p className="text-sm text-gray-500">
+                    {new Date(event.timestamp).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                  <p className="text-sm mt-1">{event.description}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 italic">No events in the selected timeframe</p>
+          )}
+        </div>
       </div>
     </div>
   )
