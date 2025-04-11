@@ -1,0 +1,43 @@
+{
+  "stocks": {
+    "AAPL": {
+      "name": "Apple Inc.",
+      "data": [
+        { "time": "2024-01-01", "value": 150.0 },
+        { "time": "2024-01-02", "value": 152.5 },
+        { "time": "2024-01-03", "value": 151.8 },
+        { "time": "2024-01-04", "value": 153.2 },
+        { "time": "2024-01-05", "value": 155.0 }
+      ],
+      "events": [
+        {
+          "time": "2024-01-02",
+          "description": "New iPhone Launch",
+          "icon": "📱"
+        },
+        {
+          "time": "2024-01-04",
+          "description": "Earnings Report",
+          "icon": "📊"
+        }
+      ]
+    },
+    "GOOGL": {
+      "name": "Alphabet Inc.",
+      "data": [
+        { "time": "2024-01-01", "value": 2800.0 },
+        { "time": "2024-01-02", "value": 2820.5 },
+        { "time": "2024-01-03", "value": 2815.8 },
+        { "time": "2024-01-04", "value": 2830.2 },
+        { "time": "2024-01-05", "value": 2845.0 }
+      ],
+      "events": [
+        {
+          "time": "2024-01-03",
+          "description": "AI Product Launch",
+          "icon": "🤖"
+        }
+      ]
+    }
+  }
+} 
