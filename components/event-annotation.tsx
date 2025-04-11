@@ -1,102 +1,112 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import * as React from "react"
 import type { StockEvent, StockDataPoint } from "@/types/stock"
+import { cn } from "@/lib/utils"
 
 interface EventAnnotationProps {
   event: StockEvent
-  dataPoint: StockDataPoint
-  chartWidth: number
-  chartHeight: number
-  stockData: StockDataPoint[]
+  data: StockDataPoint[]
+  width: number
+  height: number
+  xScale: (value: number) => number
+  yScale: (value: number) => number
 }
 
-export function EventAnnotation({ event, dataPoint, chartWidth, chartHeight, stockData }: EventAnnotationProps) {
-  const [position, setPosition] = useState({ x: 0, y: 0 })
-  const [isHovered, setIsHovered] = useState(false)
+export function EventAnnotation({
+  event,
+  data,
+  width,
+  height,
+  xScale,
+  yScale,
+}: EventAnnotationProps): React.JSX.Element {
+  const [position, setPosition] = React.useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [isHovered, setIsHovered] = React.useState(false)
+  const [gradientWidth, setGradientWidth] = React.useState(0)
+  const [gradientPosition, setGradientPosition] = React.useState(0)
 
-  useEffect(() => {
-    if (chartWidth === 0 || chartHeight === 0 || !stockData.length) return
+  React.useEffect(() => {
+    const eventIndex = data.findIndex(point => point.date === event.timestamp)
+    if (eventIndex === -1) return
 
-    // Calculate x position based on date
-    const firstDate = new Date(stockData[0].date).getTime()
-    const lastDate = new Date(stockData[stockData.length - 1].date).getTime()
-    const eventDate = new Date(event.timestamp).getTime()
+    const x = xScale(new Date(event.timestamp).getTime())
+    const y = yScale(data[eventIndex].price)
+    setPosition({ x, y })
 
-    const dateRange = lastDate - firstDate
-    const xPosition = ((eventDate - firstDate) / dateRange) * chartWidth
+    // Calculate gradient width based on impact duration
+    const impactWidth = Math.min(width * 0.2, 200) // Max width of 200px or 20% of chart width
+    setGradientWidth(impactWidth)
+    setGradientPosition(x - impactWidth / 2)
+  }, [event, data, width, xScale, yScale])
 
-    // Calculate y position based on price
-    const prices = stockData.map((d) => d.price)
-    const minPrice = Math.min(...prices)
-    const maxPrice = Math.max(...prices)
-    const priceRange = maxPrice - minPrice
-
-    // Adjust for chart margins (top: 20, bottom: 50)
-    const adjustedHeight = chartHeight - 70
-    const yPosition = adjustedHeight - ((dataPoint.price - minPrice) / priceRange) * adjustedHeight + 20
-
-    setPosition({
-      x: Math.max(30, Math.min(chartWidth - 30, xPosition)),
-      y: Math.max(30, Math.min(chartHeight - 80, yPosition)),
-    })
-  }, [chartWidth, chartHeight, event, dataPoint, stockData])
+  const priceChange = event.priceImpact || 0
+  const priceChangeColor = priceChange >= 0 ? "text-green-500" : "text-red-500"
+  const priceChangeIcon = priceChange >= 0 ? "↑" : "↓"
 
   return (
-    <div
-      className="absolute pointer-events-auto"
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        transform: "translate(-50%, -100%)",
-      }}
+    <g
+      className="event-annotation"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative">
-        <div className="w-6 h-6 rounded-full bg-white border-2 border-primary flex items-center justify-center cursor-pointer shadow-md">
-          {event.icon ? (
-            <img src={event.icon || "/placeholder.svg"} alt="" className="w-4 h-4 object-cover" />
-          ) : (
-            <span className="text-xs">!</span>
+      {/* Price gradient effect */}
+      <rect
+        x={gradientPosition}
+        y={0}
+        width={gradientWidth}
+        height={height}
+        className="fill-current opacity-5"
+      />
+
+      {/* Event icon */}
+      <g transform={`translate(${position.x}, ${position.y})`}>
+        <circle
+          r={6}
+          className={cn(
+            "fill-current",
+            priceChange >= 0 ? "text-green-500" : "text-red-500"
           )}
-        </div>
-
-        {/* Vertical line to price point */}
-        <div className="absolute w-[1px] bg-primary/50 left-1/2 top-full" style={{ height: "20px" }} />
-
-        {/* Annotation tooltip */}
-        {isHovered && (
-          <div
-            className="absolute bottom-full mb-2 bg-white shadow-lg rounded-md p-3 w-64 z-10 border border-gray-200"
-            style={{
-              left: position.x < chartWidth / 2 ? "0" : "auto",
-              right: position.x >= chartWidth / 2 ? "0" : "auto",
-              transform: position.x < chartWidth / 2 ? "translateX(-20%)" : "translateX(20%)",
-            }}
+        />
+        {event.icon && (
+          <text
+            x={0}
+            y={0}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="text-xs fill-white"
           >
-            <div className="flex items-start gap-2">
-              {event.icon && (
-                <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
-                  <img src={event.icon || "/placeholder.svg"} alt="" className="w-full h-full object-cover" />
-                </div>
-              )}
-              <div>
-                <h4 className="font-medium text-sm">{event.title}</h4>
-                <p className="text-xs text-gray-500">
-                  {new Date(event.timestamp).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </p>
-                <p className="text-xs mt-1">{event.description}</p>
-              </div>
-            </div>
-            <div className="absolute w-3 h-3 bg-white border-b border-r border-gray-200 transform rotate-45 left-1/2 -bottom-1.5 -ml-1.5"></div>
-          </div>
+            {event.icon}
+          </text>
         )}
-      </div>
-    </div>
+      </g>
+
+      {/* Tooltip */}
+      {isHovered && (
+        <g transform={`translate(${position.x + 10}, ${position.y - 10})`}>
+          <rect
+            x={0}
+            y={0}
+            width={200}
+            height={80}
+            rx={4}
+            className="fill-white dark:fill-gray-800 stroke-current"
+          />
+          <text x={10} y={20} className="text-sm font-medium">
+            {event.title}
+          </text>
+          <text x={10} y={40} className="text-xs text-gray-500 dark:text-gray-400">
+            {event.description}
+          </text>
+          <text
+            x={10}
+            y={60}
+            className={cn("text-xs font-medium", priceChangeColor)}
+          >
+            {priceChangeIcon} {Math.abs(priceChange)}%
+          </text>
+        </g>
+      )}
+    </g>
   )
 }

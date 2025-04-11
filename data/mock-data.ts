@@ -97,7 +97,11 @@ export const stockEvents: Record<string, StockEvent[]> = {
       title: "Deepseek",
       description: "Deepseek releases Chatbot",
       impact: "positive",
-      icon: "/placeholder.svg?height=40&width=40"
+      icon: "/placeholder.svg?height=40&width=40",
+      priceImpact: 5.2,
+      priceBefore: 450.25,
+      priceAfter: 473.66,
+      gradientColor: "#10B981" // Green
     },
     {
       id: "nvda-2",
@@ -105,7 +109,11 @@ export const stockEvents: Record<string, StockEvent[]> = {
       title: "Trump",
       description: "Trump releases Trump coin",
       impact: "positive",
-      icon: "/placeholder.svg?height=40&width=40"
+      icon: "/placeholder.svg?height=40&width=40",
+      priceImpact: 3.8,
+      priceBefore: 460.75,
+      priceAfter: 478.26,
+      gradientColor: "#10B981" // Green
     },
     {
       id: "nvda-3",
@@ -113,7 +121,23 @@ export const stockEvents: Record<string, StockEvent[]> = {
       title: "Apple",
       description: "Apple releases Vision Pro",
       impact: "positive",
-      icon: "/placeholder.svg?height=40&width=40"
+      icon: "/placeholder.svg?height=40&width=40",
+      priceImpact: 4.5,
+      priceBefore: 470.50,
+      priceAfter: 491.67,
+      gradientColor: "#10B981" // Green
+    },
+    {
+      id: "nvda-4",
+      timestamp: "2025-02-15",
+      title: "Trump Tariff Policy",
+      description: "Trump releases new tariff policy affecting tech imports",
+      impact: "negative",
+      customIcon: "https://imageio.forbes.com/specials-images/imageserve/678bbc074a9bdd52fe2abd09/Coin-depicting-ex-President-Trump/960x0.jpg?format=jpg&width=960",
+      priceImpact: -2.5,
+      priceBefore: 500.00,
+      priceAfter: 487.50,
+      gradientColor: "#EF4444" // Red
     }
   ],
   googl: [
@@ -177,5 +201,16 @@ export const stockEvents: Record<string, StockEvent[]> = {
       icon: "/placeholder.svg?height=40&width=40",
       impact: "neutral",
     },
+  ],
+  trump: [
+    {
+      id: "trump-1",
+      timestamp: "2025-02-15",
+      title: "Trump",
+      description: "Trump release new tariff policy",
+      impact: "negative",
+      customIcon: "https://imageio.forbes.com/specials-images/imageserve/678bbc074a9bdd52fe2abd09/Coin-depicting-ex-President-Trump/960x0.jpg?format=jpg&width=960",
+      priceImpact: -2.5
+    }
   ],
 }

@@ -31,4 +31,9 @@ export const stocks: Stock[] = [
     symbol: "TSLA",
     name: "Tesla, Inc.",
   },
+  {
+    id: "trump",
+    symbol: "TRUMP",
+    name: "Trump Policy Impact",
+  },
 ]
