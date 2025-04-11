@@ -1,8 +1,15 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #131722;
+  color: #DDD;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
 .app-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 .stock-selector {
@@ -12,15 +19,17 @@
 .stock-selector select {
   padding: 8px 12px;
   font-size: 16px;
-  border: 1px solid #ddd;
+  border: 1px solid #2B2B43;
   border-radius: 4px;
   margin-left: 10px;
+  background-color: #1E222D;
+  color: #DDD;
 }
 
 .stock-chart-container {
-  background: white;
+  background: #1E222D;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   padding: 20px;
 }
 
@@ -30,7 +39,7 @@
 
 .chart-header h2 {
   margin: 0;
-  color: #333;
+  color: #DDD;
 }
 
 .chart-container {
@@ -42,7 +51,7 @@
 .events-list {
   margin-top: 20px;
   padding: 15px;
-  background: #f8f9fa;
+  background: #2B2B43;
   border-radius: 4px;
 }
 
@@ -50,7 +59,7 @@
   display: flex;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #363A45;
 }
 
 .event-item:last-child {
@@ -63,11 +72,11 @@
 }
 
 .event-time {
-  color: #666;
+  color: #787B86;
   margin-right: 15px;
   min-width: 100px;
 }
 
 .event-description {
-  color: #333;
+  color: #DDD;
 } 

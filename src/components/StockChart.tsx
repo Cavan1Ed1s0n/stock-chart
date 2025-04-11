@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { createChart, IChartApi, ISeriesApi, LineStyle } from 'lightweight-charts';
+import { createChart, IChartApi, ISeriesApi, SeriesMarkerPosition, SeriesMarkerShape } from 'lightweight-charts';
 
 interface StockData {
   time: string;
@@ -26,29 +26,38 @@ const StockChart: React.FC<StockChartProps> = ({ data, events, symbol }) => {
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Create chart
+    // Create chart with dark theme
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { color: '#ffffff' },
-        textColor: '#333',
+        background: { color: '#1E222D' },
+        textColor: '#DDD',
       },
       grid: {
-        vertLines: { color: '#f0f0f0' },
-        horzLines: { color: '#f0f0f0' },
+        vertLines: { color: '#2B2B43' },
+        horzLines: { color: '#2B2B43' },
       },
       width: chartContainerRef.current.clientWidth,
       height: 400,
+      crosshair: {
+        mode: 1,
+        vertLine: {
+          color: '#555',
+          width: 1,
+          style: 3,
+        },
+        horzLine: {
+          color: '#555',
+          width: 1,
+          style: 3,
+        },
+      },
     });
 
     // Create line series
     const series = chart.addLineSeries({
       color: '#2962FF',
       lineWidth: 2,
-      crosshairMarker: {
-        visible: true,
-        width: 1,
-        color: '#2962FF',
-      },
+      priceLineVisible: false,
     });
 
     // Set data
@@ -61,9 +70,9 @@ const StockChart: React.FC<StockChartProps> = ({ data, events, symbol }) => {
     events.forEach(event => {
       const marker = {
         time: event.time,
-        position: 'aboveBar',
-        color: '#2962FF',
-        shape: 'circle',
+        position: 'aboveBar' as SeriesMarkerPosition,
+        color: '#FF9800',
+        shape: 'circle' as SeriesMarkerShape,
         text: event.icon,
       };
       series.setMarkers([marker]);
